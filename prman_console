@@ -1,0 +1,1 @@
+Render -r rman -proj "testLand" -cam camera3 -s 1 -e 100 /Network/Servers/donny.mddn.vuw.ac.nz/Volumes/XRaid/Homes/malletbyro/Documents/maya/projects/testLand/scenes/testRender3.ma 

@@ -1,0 +1,51 @@
+//================================================================================
+//Instructions:
+//
+//Place this script in /Users/Shared/Autodesk/maya/scripts/ along with your rmanOutputExampleProcedural.mel or equivalent script. 
+//Then create a shelf script with the code 'source "autoCreateNodeShelf.mel;' (no quotes) and run it.
+//
+//Make sure that your Renderman and custom library plugins are loaded beforehand!
+//================================================================================
+
+
+
+//Parameters
+string $customNode = "VmIslandNode";                        //Name of your plugin node
+int $clearMatDuplicates = 1;                                //Set to 0 to leave duplicate materials alone
+string $preshapeScript = "rmanOutputExampleProcedural";     //Name of the pre-shape mel function renderman will call
+
+//Member variables
+string $customNodeShader = $customNode + "_RmanShader";     //Shader assigned to node plugin
+string $customNodeSG = $customNode + "_RmanShaderSG";       //Shading group applied to node plugin
+
+
+
+//--------------------------------------------------------------------------------
+//Source the Rman preshape script
+eval("source \"" + $preshapeScript + ".mel\"");
+
+//Store source script command in a script node so we can use it if reopening the scene
+if(`objExists "reloadRmanPreshapeScript"`) delete reloadRmanPreshapeScript;
+eval("scriptNode  -beforeScript  \"source \\\"" + $preshapeScript + ".mel\" -n reloadRmanPreshapeScript");
+
+//Create the plugin node and attributes
+string $nodeName = eval("createNode " + $customNode + " -n \"" + $customNode + "_node\"");
+addAttr -ci true -h true -sn "rman__torattr___preShapeScript" -ln "rman__torattr___preShapeScript" -dt "string"; 
+eval("setAttr -type \"string\" " + $nodeName + ".rman__torattr___preShapeScript \"" + $preshapeScript + "()\"");
+
+//Clear up duplicate materials
+string $existingShaders[] = eval("ls \"" + $customNodeShader + "*\"");
+
+if($clearMatDuplicates)
+{
+    if( size($existingShaders) > 0 ){
+        for($node in $existingShaders) delete $node;
+    } 
+}
+
+//Create and connect material to shading group and plugin node
+string $newShader = eval("createNode RenderManShader -n \"" + $customNodeShader + "\"");
+string $newSG = eval("createNode shadingEngine -n \"" + $customNodeSG + "\"");
+
+eval("connectAttr -f " + $newShader + ".outColor " + $newSG + ".surfaceShader");
+eval("connectAttr -f " + $nodeName + ".iog " + $newSG + ".dsm -na");

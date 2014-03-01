@@ -1,0 +1,64 @@
+
+//
+// This script tells RfM where to find plug-ins.
+//
+// We can cause the searchpath option to be output into the RIB stream at the appropriate 
+// time, by invoking this procedure in the Default RiOptions MEL script, which is located 
+// in the Render Settings under the Common tab. It's not exactly common, but it's in the 
+// same vein as the Pre/Post Render scripts, so they're grouped together. Paste a call 
+// to the procedural above in the Default RiOptions MEL field:
+//
+//	rmanOutputProceduralSearchpath
+//
+
+// global proc rmanOutputProceduralSearchpath()
+// {
+//     RiOption "searchpath" "string procedural" "/Network/Servers/donny.mddn.vuw.ac.nz/Volumes/XRaid/Homes/shane/Desktop/vuw_comp441_class01/prman/";
+// };
+
+
+//
+// This script should be called every time RfM tried to set up your node, when rendering from Maya.
+//
+// RfM needs to be told to invoke this procedure when it encounters the VmExampleNode node. 
+// That's accomplished with a preShape MEL script. Select the VmExampleNode node, and in the 
+// Attribute Editor make sure the VmExampleNode tab is selected. Open the RenderMan Attributes 
+// manager via Attributes->RenderMan->Manage Attributes. From the list choose the Pre Shape MEL 
+// attribute and add it. The attribute shows up at the bottom of the Attribute Editor. Paste a 
+// call to the above procedural as its value:
+//
+//	rmanOutputExampleProcedural
+//
+
+global proc rmanOutputExampleProcedural()
+{
+    // Find out which object this script is associated with
+    string $object = `rman ctxGetObject`;
+    if( `nodeType $object` != "VmIslandNode" ) 
+    {
+        warning("rmanOutputExampleProcedural can only operate on nodes of type VmIslandNode");
+        return;
+    }
+
+    // These are the attributes from the example node that our
+    // VrExample procedural plugin will interpret.
+    string $rib = `getAttr ($object+".rib")`;
+
+    // The RiProcedural needs to be supplied a bounding box, and since
+    // the VmExampleNode node takes care of updating its bounding box,
+    // we'll use that.  Note the RiProcedural needs its bounding box
+    // to be expressed in centimeters.
+    string $curUnit = `currentUnit -q -linear`;
+    currentUnit -linear "cm";  // temporarily change to centimeters
+    select $object;
+    float $bbox[] = `exactWorldBoundingBox`;
+    currentUnit -linear $curUnit;
+
+    // Issue the RiProcedural call, passing the bounding box and arg list
+    // Notice Renderman wants the BBox components in a different order.
+    // Use this version if the RiOption for procedural search path is used -
+    // RiProcedural "DynamicLoad" "VrExample.so" $bbox[0] $bbox[3] $bbox[1] $bbox[4] $bbox[2] $bbox[5] $rib;
+    // Use this version if the RiOption for procedural search path is not used -
+    RiProcedural "DynamicLoad" "/Network/Servers/donny.mddn.vuw.ac.nz/Volumes/XRaid/Homes/malletbyro/Desktop/440/Byron_Mallett_440/VIslands/prman/VrIslands.so" $bbox[0] $bbox[3] $bbox[1] $bbox[4] $bbox[2] $bbox[5] $rib;
+};
+
